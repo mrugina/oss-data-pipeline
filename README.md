@@ -134,11 +134,15 @@ DELETE FROM raw_data.flights WHERE data->>'_airbyte_stream' = 'flights';
 > docker compose exec postgres psql -U postgres -c "DELETE FROM raw_data.flights WHERE data->>'_airbyte_stream' = 'flights';"
 > ```
 
-### 2. Airflow — Enable the dbt DAG
+### 2. Airflow — Enable the 2 DAGs
 
 1.  Go to http://localhost:8080 (User: `airflow`, Pass: `airflow`)
-2.  Enable the `aviation_dbt_pipeline` DAG. It is set to **manual trigger only** — it will never run on its own.
-3.  To run it: click the **▶ (Play)** button on the DAG row, then **Trigger DAG**.
+2.  Enable both DAGs (both are **manual trigger only**):
+    *   `aviation_dbt_pipeline` — runs dbt (`dbt run` + `dbt test`) for AviationStack OTP analytics.
+    *   `opensky_snapshot_pipeline` — fetches OpenSky `states/all` and stores a global airborne snapshot.
+3.  Trigger order for a full refresh:
+    1.  Trigger `opensky_snapshot_pipeline`.
+    2.  Trigger `aviation_dbt_pipeline`.
 
 ### 3. Run dbt (first time)
 
@@ -177,6 +181,7 @@ Go to http://localhost:8088 (User: `admin`, Pass: `admin`)
 2.  Set **Database** to `Warehouse`, **Schema** to `analytics`.
 3.  Run: `SELECT * FROM analytics.flights_metrics LIMIT 10;` — should return flight rows.
 4.  Run: `SELECT * FROM analytics.active_flights_total;` — should return one row with the count.
+5.  Run: `SELECT * FROM analytics.opensky_active_flights ORDER BY snapshot_ts DESC LIMIT 5;` — should return OpenSky snapshots.
 
 #### Create Dataset 1 — `flights_metrics`
 
@@ -221,6 +226,12 @@ Go to http://localhost:8088 (User: `admin`, Pass: `admin`)
 2.  **Database**: `Warehouse` · **Schema**: `analytics` · **Table**: `active_flights_total`
 3.  Click **Create Dataset and Create Chart**.
 
+#### Create Dataset 3 — `opensky_active_flights`
+
+1.  Click the **+** (top right) → **Dataset**.
+2.  **Database**: `Warehouse` · **Schema**: `analytics` · **Table**: `opensky_active_flights`
+3.  Click **Create Dataset and Create Chart**.
+
 #### Create Chart 3 — "Flights in the Air" (Big Number)
 
 This chart displays a single large number showing the total count of flights worldwide.
@@ -248,6 +259,15 @@ This chart displays a single large number showing the total count of flights wor
 3.  Drag and resize the charts — e.g. put the big number at the top, the two bar charts side by side below.
 4.  Click **Save**.
 
+#### Create Chart 4 — "Flights in the Air (OpenSky)" (Big Number)
+
+1.  Click the **+** (top right) → **Chart**.
+2.  Select dataset **`opensky_active_flights`** and choose **Big Number**.
+3.  Configure:
+    *   **Metric**: `MAX(airborne_flights)`
+    *   **Subheader**: `OpenSky airborne flights (latest snapshot)`
+4.  Click **Create Chart** (or **Update Chart**), then **Save** to `Aviation Dashboard`.
+
 ## Data Freshness & On-Demand Refresh
 
 Everything is set to **manual trigger only** to protect your 100 free API calls/month.
@@ -263,13 +283,14 @@ SELECT MAX(created_at) AS last_refreshed FROM raw_data.flights;
 1.  **Sync Airbyte**: go to http://localhost:8000 → **Connections** → click your connection → **Sync now**.
     *   ⚠️ Make sure the connection's **Replication frequency** is set to **Manual**.
 2.  **Wait for the consumer** — it picks up new Kafka messages automatically and writes them to `raw_data.flights`.
-3.  **Run dbt** (rebuilds the analytics views):
+3.  **Trigger OpenSky snapshot**: in Airflow, run `opensky_snapshot_pipeline`.
+4.  **Run dbt** (rebuilds the AviationStack analytics views):
     *   **Option A** — from Airflow: go to http://localhost:8080, find `aviation_dbt_pipeline`, click **▶ → Trigger DAG**.
     *   **Option B** — from terminal:
         ```bash
         docker compose run --rm dbt run --profiles-dir .
         ```
-4.  **Refresh Superset** — open the dashboard and click the **↻** refresh icon, or re-run the queries in SQL Lab.
+5.  **Refresh Superset** — open the dashboard and click the **↻** refresh icon, or re-run the queries in SQL Lab.
 
 ## Troubleshooting
 

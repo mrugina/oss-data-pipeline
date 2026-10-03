@@ -14,3 +14,12 @@ CREATE TABLE IF NOT EXISTS raw_data.flights (
 );
 
 CREATE SCHEMA IF NOT EXISTS analytics;
+
+CREATE TABLE IF NOT EXISTS analytics.opensky_active_flights (
+    id SERIAL PRIMARY KEY,
+    snapshot_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    airborne_flights INT NOT NULL,
+    total_states INT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'opensky'
+);
+
