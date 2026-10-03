@@ -152,7 +152,7 @@ You should see two models created:
 
 *Note: This requires data in `raw_data.flights`. Make sure the Airbyte connection has synced at least once and the consumer is running.*
 
-### 4. Superset — Connect to Postgres and build the dashboard
+### 4. Superset — Connect and build the dashboard
 
 Go to http://localhost:8088 (User: `admin`, Pass: `admin`)
 

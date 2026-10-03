@@ -1,0 +1,36 @@
+# IntelliJ / JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Logs
+logs/
+dbt_project/logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# dbt
+dbt_project/target/
+dbt_project/.user.yml
+
+# Airbyte (cloned repo — managed by deploy.sh)
+airbyte/
+
+# Docker
+*.log
+
+# Environment
+.env
+
